@@ -41,11 +41,18 @@ class ClassicSudokuManager(ManagerBase):
 
         def worker():
             self.board = ClassicSudokuBoard(difficulty, difficulty_label, variant)
-            GLib.idle_add(self._on_game_ready)
+            GLib.idle_add(self._finish_start_game, self.board)
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _finish_start_game(self, board):
+        self.board = board
+        self.build_grid()
+        self.window.stack.set_visible_child(self.window.game_scrolled_window)
+        return False
+
     def _on_game_ready(self):
+        self._idle_source_id = None
         self.build_grid()
         self.window.stack.set_visible_child(self.window.game_scrolled_window)
         return False
@@ -101,6 +108,12 @@ class ClassicSudokuManager(ManagerBase):
 
     def _clear_previous_grid(self):
         """Remove all children from the grid container."""
+        if hasattr(self, "cell_inputs") and self.cell_inputs:
+            for row in self.cell_inputs:
+                for cell in row:
+                    if cell:
+                        cell.clear_feedback_timeout()
+
         while child := self.window.grid_container.get_first_child():
             self.window.grid_container.remove(child)
 
@@ -354,6 +367,11 @@ class ClassicSudokuManager(ManagerBase):
 
     def _show_puzzle_finished_dialog(self):
         self.window.pencil_toggle_button.set_visible(False)
+        if hasattr(self, "cell_inputs") and self.cell_inputs:
+            for row in self.cell_inputs:
+                for cell in row:
+                    if cell:
+                        cell.clear_feedback_timeout()
         while child := self.window.grid_container.get_first_child():
             self.window.grid_container.remove(child)
         self.window.stack.set_visible_child(self.window.finished_page)
@@ -380,24 +398,19 @@ class ClassicSudokuManager(ManagerBase):
 
     def _clear_feedback(self, cell):
         """Remove existing highlights, tooltips, and timeouts for a cell."""
-        for tid in getattr(cell, "feedback_timeout_ids", []):
-            GLib.source_remove(tid)
-        cell.feedback_timeout_ids = []
+        cell.clear_feedback_timeout()
         cell.remove_highlight("correct")
         cell.remove_highlight("wrong")
         cell.set_tooltip_text("")
-
-    def _register_timeout(self, cell, callback, delay=3000):
-        """Register a GLib timeout and track it on the cell."""
-        tid = GLib.timeout_add(delay, callback)
-        cell.feedback_timeout_ids.append(tid)
 
     def _handle_correct_input(self, cell):
         """Handle behavior when the user enters the correct number."""
         cell.set_editable(False)
         cell.highlight("correct")
-        cell.set_tooltip_text("Correct")
-        self._register_timeout(cell, lambda: self._clear_correct_feedback(cell))
+        cell.set_tooltip_text("Correct")    
+        cell.start_feedback_timeout(
+            lambda: self._clear_correct_feedback(cell)
+        )
 
     def _clear_correct_feedback(self, cell):
         """Remove correct highlight and tooltip."""
@@ -415,7 +428,8 @@ class ClassicSudokuManager(ManagerBase):
         )
         self.conflict_cells.extend(conflicts)
 
-        self._register_timeout(cell, self._clear_conflicts)
+        cell.start_feedback_timeout(self._clear_conflicts)
+
 
     def _clear_conflicts(self):
         """Clear conflicts highlight after timeout."""
