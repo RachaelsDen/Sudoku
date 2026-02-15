@@ -227,9 +227,7 @@ class ClassicSudokuManager(ManagerBase):
                     "prevent_conflicting_pencil_notes",
                     default=True,
                 )
-                pref_enabled = (
-                    pref_value[1] if isinstance(pref_value, list) else pref_value
-                )
+                pref_enabled = pref_value
 
             if pref_enabled and self.board.has_conflict(r, c, number):
                 new_conflicts = ClassicUIHelpers.highlight_conflicts(
@@ -404,11 +402,11 @@ class ClassicSudokuManager(ManagerBase):
 
     def on_cell_filled(self, cell, number: str):
         """Called when a cell is filled with a number."""
-        casual_mode = PreferencesManager.get_preferences().general("casual_mode")[1]
+        prefs = PreferencesManager.get_preferences()
         correct_value = self.board.get_correct_value(cell.row, cell.col)
         # TODO: Add auto check for the board when casual_mdoe is turned off
         self._clear_feedback(cell)
-        if casual_mode:
+        if prefs.general("casual_mode")[1]:
             if str(number) == str(correct_value):
                 self._handle_correct_input(cell)
             else:
