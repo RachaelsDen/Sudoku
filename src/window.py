@@ -139,7 +139,8 @@ class SudokuWindow(Adw.ApplicationWindow):
         if not os.path.exists(path):
             return None
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f).get("variant", "Unknown")
+            data = json.load(f)
+        return data.get("variant", "Unknown")
 
     def on_continue_clicked(self, _):
         variant = self.get_manager_type()

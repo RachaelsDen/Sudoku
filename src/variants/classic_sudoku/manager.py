@@ -18,9 +18,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-import threading
 import unicodedata
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk
 from ...base.manager_base import ManagerBase
 from ...base.preferences_manager import PreferencesManager
 from .board import ClassicSudokuBoard
@@ -35,16 +34,6 @@ class ClassicSudokuManager(ManagerBase):
         self.parent_grid = None
         self.blocks = []
 
-    def start_game(self, difficulty: float, difficulty_label: str, variant: str):
-        self.window.stack.set_visible_child(self.window.loading_screen)
-        logging.info(f"Starting Classic Sudoku with difficulty: {difficulty}")
-
-        def worker():
-            self.board = ClassicSudokuBoard(difficulty, difficulty_label, variant)
-            GLib.idle_add(self._finish_start_game, self.board)
-
-        threading.Thread(target=worker, daemon=True).start()
-
     def _finish_start_game(self, board):
         self.board = board
         self.build_grid()
@@ -56,21 +45,6 @@ class ClassicSudokuManager(ManagerBase):
         self.build_grid()
         self.window.stack.set_visible_child(self.window.game_scrolled_window)
         return False
-
-    def load_saved_game(self):
-        self.board = ClassicSudokuBoard.load_from_file()
-        if self.board:
-            self.window.sudoku_window_title.set_subtitle(
-                f"{self.board.variant.capitalize()} • {self.board.difficulty_label}"
-            )
-            self.build_grid()
-            self._restore_game_state()
-            self.window.stack.set_visible_child(self.window.game_scrolled_window)
-            logging.info("Loaded saved Classic Sudoku game")
-            if self.board.is_solved():
-                self._show_puzzle_finished_dialog()
-        else:
-            logging.error("No saved game found")
 
     def _restore_game_state(self):
         size = self.board.rules.size
