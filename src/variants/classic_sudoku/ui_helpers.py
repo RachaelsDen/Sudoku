@@ -17,7 +17,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk  # pyright: ignore[reportAttributeAccessIssue]
 from gettext import gettext as _
 
 from ...base.ui_helpers import UIHelpers
@@ -104,13 +104,14 @@ class ClassicUIHelpers(UIHelpers):
         mouse_button,
         on_number_selected,
         on_clear_selected,
+        popover,
         pencil_mode=False,
         key_map=None,
         remove_keys=None,
     ):
         """Show the number selection popover for a Sudoku cell."""
-        popover = Gtk.Popover(has_arrow=False, position=Gtk.PositionType.BOTTOM)
-        popover.set_parent(cell)
+        if popover is None:
+            raise ValueError("popover is required (shared popover)")
 
         grid = Gtk.Grid(row_spacing=5, column_spacing=5)
         popover.set_child(grid)
@@ -130,8 +131,8 @@ class ClassicUIHelpers(UIHelpers):
         )
         grid.set_focus_on_click(True)
         grid.grab_focus()
-        popover.set_name("sudoku-popover")
-        popover.show()
+
+        popover.popup()
         return popover
 
     @staticmethod
@@ -166,7 +167,10 @@ class ClassicUIHelpers(UIHelpers):
             done_button.set_size_request(-1, 40)
             done_button.set_hexpand(True)
             done_button.set_tooltip_text(_("Finish Editing Cell"))
-            done_button.connect("clicked", lambda _: popover.popdown())
+            done_button.connect(
+                "clicked",
+                lambda *_: popover.popdown(),
+            )
             button_box.append(done_button)
 
         return clear_button

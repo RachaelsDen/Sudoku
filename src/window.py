@@ -17,7 +17,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from gi.repository import Adw, Gtk, Gio
+from gi.repository import Adw, Gtk, Gio, Gdk
 from gettext import gettext as _
 from .screens.game_setup_dialog import GameSetupDialog
 from .screens.shortcuts_overlay import ShortcutsOverlay
@@ -72,9 +72,9 @@ class SudokuWindow(Adw.ApplicationWindow):
         self._connect_buttons()
         self._build_primary_menu(show_preferences=False)
 
-        gesture = Gtk.GestureClick.new()
-        gesture.connect("pressed", self.on_window_clicked)
-        self.add_controller(gesture)
+        legacy = Gtk.EventControllerLegacy()
+        legacy.connect("event", self.on_window_clicked)
+        self.add_controller(legacy)
 
     def _connect_buttons(self):
         self.continue_button.connect("clicked", self.on_continue_clicked)
@@ -181,10 +181,26 @@ class SudokuWindow(Adw.ApplicationWindow):
     def on_show_preferences(self, *_):
         PreferencesDialog(self).present()
 
-    def on_window_clicked(self, _, __, x, y):
+    @staticmethod
+    def _left_button_press_position(event):
+        try:
+            if event.get_event_type() != Gdk.EventType.BUTTON_PRESS:
+                return None
+            if event.get_button() != 1:
+                return None
+            return event.get_position()
+        except (AttributeError, TypeError):
+            return None
+
+    def on_window_clicked(self, _, event):
+        pos = self._left_button_press_position(event)
+        if pos is None:
+            return False
+        x, y = pos
+
         frame = self.grid_container.get_first_child()
         if not frame:
-            return
+            return False
         grid = frame.get_child()
         alloc = grid.get_allocation()
         if not (
@@ -192,6 +208,7 @@ class SudokuWindow(Adw.ApplicationWindow):
             and alloc.y <= y < alloc.y + alloc.height
         ):
             self.manager.on_grid_unfocus()
+        return False
 
     def _setup_breakpoints(self):
         def bp(cond, apply_cb, unapply_cb):

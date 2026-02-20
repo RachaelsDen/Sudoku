@@ -17,7 +17,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class SudokuCell(Gtk.Button):
@@ -40,18 +40,6 @@ class SudokuCell(Gtk.Button):
 
     def is_editable(self) -> bool:
         return self._editable
-
-    def do_clicked(self, *args):
-        """Only trigger clicked if editable."""
-        if self._editable:
-            try:
-                super().do_clicked(*args)
-            except Exception:
-                # If there's an error in the parent's do_clicked, handle gracefully
-                pass
-        else:
-            # swallow the click (make it a no-op)
-            return
 
     def _setup_ui(self):
         """Set up the Sudoku cell UI."""
@@ -116,7 +104,7 @@ class SudokuCell(Gtk.Button):
         """Get the main value of the cell."""
         return self.main_label.get_text()
 
-    def update_notes(self, notes: set):
+    def update_notes(self, notes: set[str]):
         """Update the notes display."""
         # Clear old labels
         for child in list(self.notes_grid):

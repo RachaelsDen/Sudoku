@@ -17,7 +17,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from gi.repository import Gtk
+from gi.repository import Gtk  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class SudokuCell(Gtk.Button):
@@ -106,7 +106,7 @@ class SudokuCell(Gtk.Button):
         """Get the main value of the cell."""
         return self.main_label.get_text()
 
-    def update_notes(self, notes: set):
+    def update_notes(self, notes: set[str]):
         """Update the notes display."""
         # Clear old labels
         for child in list(self.notes_grid):

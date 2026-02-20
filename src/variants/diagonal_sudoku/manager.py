@@ -30,21 +30,10 @@ class DiagonalSudokuManager(ClassicSudokuManager):
         self.key_map, self.remove_keys = DiagonalUIHelpers.setup_key_mappings()
         self.ui_helpers = DiagonalUIHelpers
 
-    def on_cell_clicked(self, gesture, n_press, x, y, cell):
-        """Handle mouse clicks on a cell (diagonal-aware)."""
-        # Use diagonal-aware highlighting
-        self.ui_helpers.highlight_related_cells(
-            self.cell_inputs, cell.row, cell.col, self.board.rules.block_size
-        )
-
-        if cell.is_editable() and n_press == 1:
-            self._show_popover(cell, gesture.get_current_button())
-        else:
-            cell.grab_focus()
-
     def _focus_cell(self, row: int, col: int):
         """Handle keyboard navigation focus (diagonal-aware)."""
-        size = self.board.rules.size
+        board = self._require_board("Illegal state: cannot focus cell without a board")
+        size = board.rules.size
         if 0 <= row < size and 0 <= col < size:
             cell = self.cell_inputs[row][col]
             if cell:
@@ -54,7 +43,7 @@ class DiagonalSudokuManager(ClassicSudokuManager):
                     self.cell_inputs,
                     row,
                     col,
-                    self.board.rules.block_size,
+                    board.rules.block_size,
                     cell.is_editable(),
                 )
 
@@ -79,8 +68,12 @@ class DiagonalSudokuManager(ClassicSudokuManager):
 
     def on_cell_filled(self, cell, number: str):
         """Called when a cell is filled with a number."""
-        casual_mode = PreferencesManager.get_preferences().general("casual_mode")[1]
-        correct_value = self.board.get_correct_value(cell.row, cell.col)
+        board = self._require_board("Illegal state: no board for on_cell_filled")
+        prefs = PreferencesManager.get_preferences()
+        if prefs is None:
+            raise RuntimeError("Illegal state: preferences unavailable")
+        casual_mode = prefs.general("casual_mode")[1]
+        correct_value = board.get_correct_value(cell.row, cell.col)
         # TODO: Add auto check for the board when casual_mdoe is turned off
         self._clear_feedback(cell)
         if casual_mode:
