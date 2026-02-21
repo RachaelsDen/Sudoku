@@ -55,7 +55,8 @@ class ClassicSudokuManager(ManagerBase):
         if self.parent_grid is None:
             return None
 
-        popover = Gtk.Popover(has_arrow=False, position=Gtk.PositionType.BOTTOM)
+        popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM)
+        popover.set_has_arrow(False)
         popover.set_name("sudoku-popover")
         popover.set_parent(self.parent_grid)
         popover.connect("closed", self._on_cell_popover_closed)

@@ -45,7 +45,8 @@ def test_fd_count_bounded_when_reusing_one_popover():
     win.present()
     _drain_events(GLib)
 
-    popover = Gtk.Popover(has_arrow=False, position=Gtk.PositionType.BOTTOM)
+    popover = Gtk.Popover(position=Gtk.PositionType.BOTTOM)
+    popover.set_has_arrow(False)
     popover.set_parent(grid)
 
     first = buttons[0]
