@@ -21,10 +21,11 @@ import gi
 import platform
 import logging
 import logging.handlers
-from gi.repository import Gio, Adw, Gtk, GLib
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
+
+from gi.repository import Gio, Adw, Gtk, GLib
 
 from .window import SudokuWindow
 from .screens.help_dialog import HowToPlayDialog

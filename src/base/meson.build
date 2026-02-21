@@ -7,7 +7,9 @@ services_sources = [
     'rules_base.py',
     'ui_helpers.py',
     'preferences.py',
-    'preferences_manager.py'
+    'preferences_manager.py',
+    'log_paths.py',
+    'constants.py',
 ]
 
 install_data(services_sources, install_dir: modulesubdir)
