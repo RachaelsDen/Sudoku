@@ -21,7 +21,10 @@ from gi.repository import Gtk, GLib
 from .ui_helpers import UIHelpers
 from .preferences_manager import PreferencesManager
 import logging
+import os
 import threading
+
+logger = logging.getLogger(__name__)
 
 
 class ManagerBase:
@@ -34,19 +37,33 @@ class ManagerBase:
         self.pencil_mode = False
 
     def load_saved_game(self):
+        save_path = self.board_cls.DEFAULT_SAVE_PATH
+        save_exists = os.path.exists(save_path)
+
         self.board = self.board_cls.load_from_file()
+
         if self.board:
+            filled_cells = sum(1 for row in self.board.user_inputs for cell in row if cell is not None)
+            notes_count = sum(len(notes) for row in self.board.notes for notes in row)
+
             self.window.sudoku_window_title.set_subtitle(
                 f"{self.board.variant.capitalize()} • {self.board.difficulty_label}"
             )
             self.build_grid()
             self._restore_game_state()
             self.window.stack.set_visible_child(self.window.game_scrolled_window)
-            logging.info(f"Loaded saved {self.board.variant.capitalize()} Sudoku game")
+            logger.info(
+                f"Restored {self.board.variant.capitalize()} Sudoku: "
+                f"filled_cells={filled_cells} notes={notes_count}"
+            )
             if self.board.is_solved():
                 self._show_puzzle_finished_dialog()
         else:
-            logging.error("No saved game found")
+            logger.error(
+                "No saved game found path=%s exists=%s",
+                save_path,
+                save_exists,
+            )
 
     def _restore_game_state(self):
         raise NotImplementedError
@@ -56,7 +73,7 @@ class ManagerBase:
 
     def start_game(self, difficulty: float, difficulty_label: str, variant: str):
         self.window.stack.set_visible_child(self.window.loading_screen)
-        logging.info(
+        logger.info(
             f"Starting {variant.capitalize()} Sudoku with difficulty: {difficulty}"
         )
 
@@ -151,7 +168,7 @@ class ManagerBase:
     def on_pencil_toggled(self, button: Gtk.ToggleButton):
         """Shared handler for pencil mode toggling."""
         self.pencil_mode = button.get_active()
-        logging.info(
+        logger.info(
             "Pencil Mode is now ON" if self.pencil_mode else "Pencil mode is now OFF"
         )
 
