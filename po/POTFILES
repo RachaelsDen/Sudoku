@@ -8,5 +8,4 @@ src/gtk/finished-overlay.blp
 src/gtk/shortcuts-overlay.blp
 src/finished_overlay.py
 src/game_manager.py
-src/help_dialog.py
 src/difficulty_selection_dialog.py

@@ -176,7 +176,7 @@ class SudokuWindow(Adw.ApplicationWindow):
         self._setup_ui()
         self.manager.start_game(difficulty, label, variant_name)
 
-    def on_show_primary_menu(self, *_):
+    def on_show_primary_menu(self):
         self.primary_menu_button.popup()
 
     def on_show_shortcuts_overlay(self, *_):
@@ -184,7 +184,7 @@ class SudokuWindow(Adw.ApplicationWindow):
         shortcuts_overlay.present()
 
     def on_show_preferences(self, *_):
-        PreferencesDialog(self).present()
+        PreferencesDialog(self, self.manager.board.save_to_file).present()
 
     def _on_window_pressed(self, gesture, n_press, x, y):
         if gesture.get_current_button() != 1:
