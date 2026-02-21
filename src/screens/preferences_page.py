@@ -46,7 +46,7 @@ class VariantPreferencesPage(Adw.PreferencesGroup):
             self.add(row)
             self.controls[key] = switch
 
-    def on_toggle_changed(self, switch, gparam, key):
+    def on_toggle_changed(self, switch, _gparam, key):
         self.variant_preferences[key] = switch.get_active()
         # self.get_toplevel().variant_preferences[key] = switch.get_active()
         self.auto_save_function()
@@ -83,10 +83,15 @@ class GeneralPreferencesPage(Adw.PreferencesGroup):
             self.add(row)
             self.controls[key] = switch
 
-    def on_toggle_changed(self, switch, gparam, key):
+    def on_toggle_changed(self, switch, _gparam, key):
         value = self.general_preferences[key]
         if isinstance(value, list):
             value[1] = switch.get_active()
         else:
             self.general_preferences[key] = switch.get_active()
         self.auto_save_function()
+
+        if key == "debug_logging":
+            from src.log_utils import set_debug_logging
+
+            set_debug_logging(switch.get_active())
