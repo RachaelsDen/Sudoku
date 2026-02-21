@@ -26,6 +26,7 @@ class Preferences(ABC):
             "Highlight when input does not match the correct solution",
             True,
         ],
+        "debug_logging": ["Enable verbose debug logging to file", False],
         "prevent_conflicting_pencil_notes": False,
         "highlight_row": True,
         "highlight_column": True,
