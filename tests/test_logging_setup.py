@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# pyright: reportUnusedFunction=false
+
 import os
+import re
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -28,6 +31,8 @@ def _logging_guard():
     log_utils_module._logging_configured = False
     log_utils_module._log_buffer_handler = None
     log_utils_module._session_id = None
+    if hasattr(log_utils_module, "_startup_header_logged"):
+        log_utils_module._startup_header_logged = False
 
     # Clear all handlers from root logger
     root_logger = logging.getLogger()
@@ -188,20 +193,40 @@ class TestLogSetup:
         logs = handler.get_logs()
         assert "Test message" in logs
 
-    def test_setup_logging_session_id_present_in_buffer(self):
-        """Verify session_id appears in log messages from LogBufferHandler."""
-        handler = setup_logging()
+    def test_setup_logging_session_id_in_startup_header(self):
+        """Verify session_id appears in startup header, not on every log line."""
+        handler = setup_logging(version="1.0.0")
 
-        # Log a test message
         test_logger = logging.getLogger(__name__)
-        test_logger.info("Test message with session")
+        test_logger.info("Test message")
 
-        # Retrieve logs from buffer
         logs = handler.get_logs()
 
-        # Verify session_id is present
+        assert "session_start " in logs
         assert "session_id=" in logs
-        assert len(logs.split("session_id=")) > 1
+        assert re.search(r" pid=\d+", logs)
+        assert " version=1.0.0" in logs
+        assert re.search(r" log_file=\S+", logs)
+
+        assert logs.count("session_id=") == 1
+
+        msg_lines = [line for line in logs.splitlines() if "Test message" in line]
+        assert msg_lines, "Expected the test log line to be present in the buffer"
+        assert all("session_id=" not in line for line in msg_lines)
+
+    def test_startup_header_idempotent(self):
+        """Verify startup header exactly once despite multiple setup_logging calls."""
+        handler1 = setup_logging(version="1.0.0")
+        handler2 = setup_logging(version="2.0.0")
+
+        assert handler1 is handler2
+
+        logs = handler1.get_logs()
+
+        assert logs.count("session_start ") == 1
+
+        assert " version=1.0.0" in logs
+        assert " version=2.0.0" not in logs
 
     def test_get_session_id_returns_same_uuid(self):
         """Verify get_session_id returns the same UUID on repeated calls."""
