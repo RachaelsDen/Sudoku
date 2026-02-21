@@ -18,10 +18,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import json
+import logging
 import os
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Self
 from .preferences_manager import PreferencesManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class BoardBase(ABC):
@@ -69,8 +74,24 @@ class BoardBase(ABC):
         if not os.path.exists(filename):
             return None
 
-        with open(filename, "r", encoding="utf-8") as f:
-            state = json.load(f)
+        start_ts = time.time()
+        logger.info(
+            "board_load_start path=%s variant=%s duration_ms=%s",
+            filename,
+            "unknown",
+            0,
+        )
+
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            logger.error(
+                "board_load_error path=%s",
+                filename,
+                exc_info=True,
+            )
+            raise
 
         self = cls.__new__(cls)
         self.rules = rules
@@ -97,15 +118,41 @@ class BoardBase(ABC):
 
         prefs.variant_defaults.update(self.variant_preferences)
         prefs.general_defaults.update(self.general_preferences)
+
+        duration_ms = int((time.time() - start_ts) * 1000)
+        logger.info(
+            "board_load_success path=%s variant=%s duration_ms=%s",
+            filename,
+            self.variant,
+            duration_ms,
+        )
         return self
 
     @classmethod
     def load_from_file(cls, filename: str | None = None) -> Self | None:
+        del filename
         raise NotImplementedError
 
     def save_to_file(self, filename: str | None = None):
         path = filename or self.DEFAULT_SAVE_PATH
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        start_ts = time.time()
+        logger.info(
+            "board_save_start path=%s variant=%s duration_ms=%s",
+            path,
+            self.variant,
+            0,
+        )
+
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        except (OSError, UnicodeDecodeError):
+            logger.error(
+                "board_save_error path=%s",
+                path,
+                exc_info=True,
+            )
+            raise
+
         prefs = PreferencesManager.get_preferences()
         if prefs is None:
             raise RuntimeError("Preferences not initialized")
@@ -120,8 +167,24 @@ class BoardBase(ABC):
             "user_inputs": self.user_inputs,
             "notes": [[list(n) for n in row] for row in self.notes],
         }
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(state, f)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(state, f)
+        except (OSError, UnicodeDecodeError):
+            logger.error(
+                "board_save_error path=%s",
+                path,
+                exc_info=True,
+            )
+            raise
+
+        duration_ms = int((time.time() - start_ts) * 1000)
+        logger.info(
+            "board_save_success path=%s variant=%s duration_ms=%s",
+            path,
+            self.variant,
+            duration_ms,
+        )
 
     def set_input(self, row, col, value):
         self.user_inputs[row][col] = value
