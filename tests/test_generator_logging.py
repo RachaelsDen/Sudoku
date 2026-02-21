@@ -30,7 +30,7 @@ def test_success_logs_start_and_success(monkeypatch, caplog):
     import src.base.generator_base as genmod
 
     t = iter([10.0, 10.125])
-    monkeypatch.setattr(genmod.time, "time", lambda: next(t))
+    monkeypatch.setattr(genmod.time, "monotonic", lambda: next(t))
     monkeypatch.setattr(genmod.mp, "Queue", lambda: _FakeQueue())
 
     class _FakeProcess:

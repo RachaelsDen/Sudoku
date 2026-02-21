@@ -126,7 +126,7 @@ def test_get_manager_type_returns_variant_from_metadata(monkeypatch, tmp_path):
     assert win.get_manager_type(str(path)) == "classic"
 
 
-def test_get_manager_type_defaults_to_unknown_when_variant_missing(monkeypatch, tmp_path):
+def test_get_manager_type_defaults_unknown_when_variant_missing(monkeypatch, tmp_path):
     window_module = _import_window_module(monkeypatch)
     SudokuWindow = window_module.SudokuWindow
 

@@ -35,7 +35,7 @@ class GeneratorBase(ABC):
         Run the variant's `_generate_impl` in a subprocess with timeout.
         Returns (puzzle, solution).
         """
-        start_time = time.time()
+        start_time = time.monotonic()
         logger.info(
             "Starting puzzle generation difficulty=%s timeout=%s",
             difficulty,
@@ -59,7 +59,7 @@ class GeneratorBase(ABC):
 
         if not queue.empty():
             puzzle_solution = queue.get()
-            duration_ms = int((time.time() - start_time) * 1000)
+            duration_ms = int((time.monotonic() - start_time) * 1000)
             logger.info(
                 "Puzzle generated successfully difficulty=%s timeout=%s duration_ms=%s",
                 difficulty,
