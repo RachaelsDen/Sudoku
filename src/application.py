@@ -19,14 +19,17 @@
 
 import gi
 import platform
+import logging
+import logging.handlers
+from gi.repository import Gio, Adw, Gtk, GLib
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Gio, Adw, Gtk, GLib
 from .window import SudokuWindow
 from .screens.help_dialog import HowToPlayDialog
-from .log_utils import setup_logging
+from . import log_utils
+from .base.log_paths import get_log_file_path
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -40,7 +43,7 @@ class SudokuApplication(Adw.Application):
         self.version = version
         self._setup_actions()
         self._setup_accelerators()
-        self.log_handler = setup_logging()
+        self.log_handler = log_utils._log_buffer_handler or log_utils.setup_logging()
 
     def _setup_actions(self):
         """Set up application actions."""
@@ -75,6 +78,14 @@ class SudokuApplication(Adw.Application):
             else ""
         )
 
+        log_file_path = get_log_file_path()
+        root_logger = logging.getLogger()
+        log_level = "INFO"
+        for handler in root_logger.handlers:
+            if isinstance(handler, logging.handlers.RotatingFileHandler):
+                log_level = "DEBUG" if handler.level == logging.DEBUG else "INFO"
+                break
+
         info = (
             f"Sudoku {self.version}\n"
             f"System: {system}\n"
@@ -83,6 +94,8 @@ class SudokuApplication(Adw.Application):
             f"GTK {Gtk.MAJOR_VERSION}.{Gtk.MINOR_VERSION}.{Gtk.MICRO_VERSION}\n"
             f"Adwaita {Adw.MAJOR_VERSION}.{Adw.MINOR_VERSION}.{Adw.MICRO_VERSION}\n"
             f"PyGObject {'.'.join(map(str, gi.version_info))}\n"
+            f"Log File: {log_file_path}\n"
+            f"Log Level: {log_level}\n"
             "\n--- Logs ---\n"
             f"{self.log_handler.get_logs()}"
         )
@@ -125,12 +138,12 @@ class SudokuApplication(Adw.Application):
         )
         about.present(self.props.active_window)
 
-    def on_how_to_play(self, action, param):
+    def on_how_to_play(self, _action, _param):
         """Show how to play dialog."""
         dialog = HowToPlayDialog()
         dialog.present(self.props.active_window)
 
-    def _on_close_request(self, *args):
+    def _on_close_request(self, *_args):
         self.quit()
 
     def create_action(self, name, callback, shortcuts=None):
