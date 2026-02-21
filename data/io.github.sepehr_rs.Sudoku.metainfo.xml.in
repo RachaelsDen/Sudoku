@@ -73,6 +73,19 @@
   </developer>
 
   <releases translate="no">
+      <release version="1.6.0" date="2026-02-21">
+        <description>
+          <p>What's new in this update:</p>
+          <ul>
+            <li>Resolved issues with the Diagonal Sudoku variant for smoother gameplay, thanks to @RachaelsDen!</li>
+            <li>Added automatic saving of your preferences.</li>
+            <li>Enhanced the user interface, thanks to Tobias Bernard and Ignacy Kuchciński for their helpful reviews!</li>
+            <li>Refreshed the game's icon for a cleaner look, thanks to Jakub Steiner!</li>
+            <li>Added German translation, thanks to tronta!</li>
+            <li>And many more improvements and fixes!</li>
+          </ul>
+        </description>
+      </release>
       <release version="1.5.0" date="2025-09-26">
         <description>
           <p>Bugfixes and new features:</p>
