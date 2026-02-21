@@ -18,7 +18,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from abc import ABC, abstractmethod
+import logging
 import multiprocessing as mp
+import time
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class GeneratorBase(ABC):
@@ -29,21 +35,49 @@ class GeneratorBase(ABC):
         Run the variant's `_generate_impl` in a subprocess with timeout.
         Returns (puzzle, solution).
         """
+        start_time = time.time()
+        logger.info(
+            "Starting puzzle generation difficulty=%s timeout=%s",
+            difficulty,
+            timeout,
+        )
+
         queue = mp.Queue()
         process = mp.Process(target=self._generate_worker, args=(queue, difficulty))
         process.start()
         process.join(timeout)
 
         if process.is_alive():
+            logger.warning(
+                "Puzzle generation timed out difficulty=%s timeout=%s",
+                difficulty,
+                timeout,
+            )
             process.terminate()
             process.join()
             raise TimeoutError("Puzzle generation timed out")
 
         if not queue.empty():
-            return queue.get()
+            puzzle_solution = queue.get()
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(
+                "Puzzle generated successfully difficulty=%s timeout=%s duration_ms=%s",
+                difficulty,
+                timeout,
+                duration_ms,
+            )
+            return puzzle_solution
+
+        logger.error(
+            "Puzzle generation failed difficulty=%s timeout=%s exitcode=%s is_alive=%s",
+            difficulty,
+            timeout,
+            process.exitcode,
+            process.is_alive(),
+        )
         raise RuntimeError("Failed to generate puzzle")
 
-    def _generate_worker(self, queue, difficulty: float):
+    def _generate_worker(self, queue: Any, difficulty: float) -> None:
         puzzle, solution = self._generate_impl(difficulty)
         queue.put((puzzle, solution))
 
