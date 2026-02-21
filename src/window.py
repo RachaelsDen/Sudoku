@@ -31,6 +31,9 @@ from .variants.diagonal_sudoku.preferences import DiagonalSudokuPreferences
 from .base.preferences_manager import PreferencesManager
 import os
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Keep template widget types imported for GTK template registration
 _TEMPLATE_WIDGET_TYPES = (FinishedPage, LoadingScreen)
@@ -58,6 +61,7 @@ class SudokuWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self.manager = None
         self.is_game_page = False
+        self.logger = logging.getLogger(__name__)
         actions = {
             "show-primary-menu": self.on_show_primary_menu,
             "show-shortcuts-overlay": self.on_show_shortcuts_overlay,
@@ -140,14 +144,19 @@ class SudokuWindow(Adw.ApplicationWindow):
             return ClassicSudokuManager(self), ClassicSudokuPreferences()
         if variant == "diagonal":
             return DiagonalSudokuManager(self), DiagonalSudokuPreferences()
+        self.logger.error("Unknown Sudoku variant: %s", variant)
         raise ValueError(f"Unknown Sudoku variant: {variant}")
 
     def get_manager_type(self, filename=None):
         path = filename or "saves/board.json"
         if not os.path.exists(path):
             return None
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self.logger.error("Failed to read saved-game metadata from %s: %s", path, e, exc_info=True)
+            return None
         return data.get("variant", "Unknown")
 
     def on_continue_clicked(self, _):
