@@ -60,7 +60,6 @@ def set_debug_logging(enabled: bool) -> None:
     """
     global _exc_info_enabled
 
-    was_enabled = is_debug_logging_enabled()
     target_level = logging.DEBUG if enabled else logging.INFO
     _exc_info_enabled = enabled
 
@@ -70,7 +69,7 @@ def set_debug_logging(enabled: bool) -> None:
         if isinstance(handler, RotatingFileHandler):
             handler.setLevel(target_level)
 
-    if enabled and not was_enabled:
+    if enabled:
         log_preferences_snapshot("debug_enabled")
 
 
