@@ -4,6 +4,7 @@ import logging
 
 import pytest
 
+import src.base.generator_base as genmod
 from src.base.generator_base import GeneratorBase
 
 
@@ -27,8 +28,6 @@ class _TestGenerator(GeneratorBase):
 
 
 def test_success_logs_start_and_success(monkeypatch, caplog):
-    import src.base.generator_base as genmod
-
     t = iter([10.0, 10.125])
     monkeypatch.setattr(genmod.time, "monotonic", lambda: next(t))
     monkeypatch.setattr(genmod.mp, "Queue", lambda: _FakeQueue())
@@ -81,8 +80,6 @@ def test_success_logs_start_and_success(monkeypatch, caplog):
 
 
 def test_timeout_logs_warn_with_difficulty_and_timeout(monkeypatch, caplog):
-    import src.base.generator_base as genmod
-
     monkeypatch.setattr(genmod.mp, "Queue", lambda: _FakeQueue())
 
     class _FakeProcess:
@@ -124,8 +121,6 @@ def test_timeout_logs_warn_with_difficulty_and_timeout(monkeypatch, caplog):
 
 
 def test_failure_logs_error_with_exitcode_and_is_alive(monkeypatch, caplog):
-    import src.base.generator_base as genmod
-
     monkeypatch.setattr(genmod.mp, "Queue", lambda: _FakeQueue())
 
     class _FakeProcess:

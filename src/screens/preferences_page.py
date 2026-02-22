@@ -19,6 +19,8 @@
 
 from gi.repository import Gtk, Adw
 
+from ..log_utils import log_preference_change
+
 
 class VariantPreferencesPage(Adw.PreferencesGroup):
     # TODO: Consider changing the preferences types for variants to list too.
@@ -48,6 +50,7 @@ class VariantPreferencesPage(Adw.PreferencesGroup):
 
     def on_toggle_changed(self, switch, _gparam, key):
         self.variant_preferences[key] = switch.get_active()
+        log_preference_change("variant", key, self.variant_preferences[key])
         # self.get_toplevel().variant_preferences[key] = switch.get_active()
         self.auto_save_function()
 
@@ -87,11 +90,9 @@ class GeneralPreferencesPage(Adw.PreferencesGroup):
         value = self.general_preferences[key]
         if isinstance(value, list):
             value[1] = switch.get_active()
+            new_value = value[1]
         else:
             self.general_preferences[key] = switch.get_active()
+            new_value = self.general_preferences[key]
+        log_preference_change("general", key, new_value)
         self.auto_save_function()
-
-        if key == "debug_logging":
-            from ..log_utils import set_debug_logging
-
-            set_debug_logging(switch.get_active())

@@ -24,9 +24,6 @@ import time
 from typing import Any
 
 
-logger = logging.getLogger(__name__)
-
-
 class GeneratorBase(ABC):
     """Abstract puzzle generator with optional multiprocessing."""
 
@@ -36,7 +33,7 @@ class GeneratorBase(ABC):
         Returns (puzzle, solution).
         """
         start_time = time.monotonic()
-        logger.info(
+        logging.getLogger(__name__).info(
             "Starting puzzle generation difficulty=%s timeout=%s",
             difficulty,
             timeout,
@@ -48,7 +45,7 @@ class GeneratorBase(ABC):
         process.join(timeout)
 
         if process.is_alive():
-            logger.warning(
+            logging.getLogger(__name__).warning(
                 "Puzzle generation timed out difficulty=%s timeout=%s",
                 difficulty,
                 timeout,
@@ -60,7 +57,7 @@ class GeneratorBase(ABC):
         if not queue.empty():
             puzzle_solution = queue.get()
             duration_ms = int((time.monotonic() - start_time) * 1000)
-            logger.info(
+            logging.getLogger(__name__).info(
                 "Puzzle generated successfully difficulty=%s timeout=%s duration_ms=%s",
                 difficulty,
                 timeout,
@@ -68,7 +65,7 @@ class GeneratorBase(ABC):
             )
             return puzzle_solution
 
-        logger.error(
+        logging.getLogger(__name__).error(
             "Puzzle generation failed difficulty=%s timeout=%s exitcode=%s is_alive=%s",
             difficulty,
             timeout,

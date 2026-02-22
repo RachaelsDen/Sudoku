@@ -2,6 +2,10 @@ import os
 import time
 
 import pytest
+import gi
+
+gi.require_version("Gtk", "4.0")
+from gi.repository import Gtk, Gdk, GLib
 
 
 if os.environ.get("SUDOKU_FD_TEST") != "1":
@@ -26,11 +30,6 @@ def _drain_events(glib):
 
 
 def test_fd_count_bounded_when_reusing_one_popover():
-    import gi
-
-    gi.require_version("Gtk", "4.0")
-    from gi.repository import Gtk, Gdk, GLib
-
     win = Gtk.Window()
     grid = Gtk.Grid()
     win.set_child(grid)

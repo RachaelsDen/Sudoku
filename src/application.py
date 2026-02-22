@@ -25,14 +25,13 @@ import logging.handlers
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Gio, Adw, Gtk, GLib
+from gi.repository import Gio, Adw, Gtk
 
 from .window import SudokuWindow
+from .screens.about_dialog import SudokuAboutDialog
 from .screens.help_dialog import HowToPlayDialog
 from . import log_utils
 from .base.log_paths import get_log_file_path
-from pathlib import Path
-import xml.etree.ElementTree as ET
 
 
 class SudokuApplication(Adw.Application):
@@ -45,6 +44,7 @@ class SudokuApplication(Adw.Application):
         self._setup_actions()
         self._setup_accelerators()
         self.log_handler = log_utils._log_buffer_handler or log_utils.setup_logging()
+        log_utils.set_debug_logging(log_utils.is_debug_logging_enabled())
 
     def _setup_actions(self):
         """Set up application actions."""
@@ -103,41 +103,8 @@ class SudokuApplication(Adw.Application):
         return info
 
     def on_about_action(self, *_):
-        # Inline metainfo lookup and release notes extraction
-        release_notes = ""
-        for dir in GLib.get_system_data_dirs():
-            metainfo = (
-                Path(dir) / "metainfo" / "io.github.sepehr_rs.Sudoku.metainfo.xml"
-            )
-            if metainfo.exists():
-                root = ET.parse(metainfo).getroot()
-                ns = {"m": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
-                releases = root.find("m:releases" if ns else "releases", ns)
-                if releases:
-                    # Find release with matching version and get its description
-                    release_notes = "".join(
-                        ET.tostring(e, encoding="unicode")
-                        for r in releases.findall("m:release" if ns else "release", ns)
-                        if r.get("version") == self.version
-                        for e in (
-                            r.find("m:description" if ns else "description", ns) or []
-                        )
-                    )
-                break  # stop after first found file
-
-        about = Adw.AboutDialog(
-            application_name="Sudoku",
-            application_icon="io.github.sepehr_rs.Sudoku",
-            developer_name="Sepehr",
-            version=self.version,
-            developers=["Sepehr", "Revisto"],
-            copyright="© 2025 sepehr-rs",
-            license_type=Gtk.License.GPL_3_0,
-            debug_info=self.generate_debug_info(),
-            issue_url="https://github.com/sepehr-rs/sudoku/issues",
-            release_notes=release_notes,
-        )
-        about.present(self.props.active_window)
+        dialog = SudokuAboutDialog(self.props.active_window, self.version)
+        dialog.present()
 
     def on_how_to_play(self, _action, _param):
         """Show how to play dialog."""

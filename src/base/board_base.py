@@ -26,9 +26,6 @@ from typing import Any, Self
 from .preferences_manager import PreferencesManager
 
 
-logger = logging.getLogger(__name__)
-
-
 class BoardBase(ABC):
     DEFAULT_SAVE_PATH = "saves/board.json"
 
@@ -75,7 +72,7 @@ class BoardBase(ABC):
             return None
 
         start_ts = time.time()
-        logger.info(
+        logging.getLogger(__name__).info(
             "board_load_start path=%s variant=%s duration_ms=%s",
             filename,
             "unknown",
@@ -86,7 +83,7 @@ class BoardBase(ABC):
             with open(filename, "r", encoding="utf-8") as f:
                 state = json.load(f)
         except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            logger.error(
+            logging.getLogger(__name__).error(
                 "board_load_error path=%s",
                 filename,
                 exc_info=True,
@@ -120,7 +117,7 @@ class BoardBase(ABC):
         prefs.general_defaults.update(self.general_preferences)
 
         duration_ms = int((time.time() - start_ts) * 1000)
-        logger.info(
+        logging.getLogger(__name__).info(
             "board_load_success path=%s variant=%s duration_ms=%s",
             filename,
             self.variant,
@@ -136,7 +133,7 @@ class BoardBase(ABC):
     def save_to_file(self, filename: str | None = None):
         path = filename or self.DEFAULT_SAVE_PATH
         start_ts = time.time()
-        logger.info(
+        logging.getLogger(__name__).info(
             "board_save_start path=%s variant=%s duration_ms=%s",
             path,
             self.variant,
@@ -146,7 +143,7 @@ class BoardBase(ABC):
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
         except (OSError, UnicodeDecodeError):
-            logger.error(
+            logging.getLogger(__name__).error(
                 "board_save_error path=%s",
                 path,
                 exc_info=True,
@@ -171,7 +168,7 @@ class BoardBase(ABC):
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(state, f)
         except (OSError, UnicodeDecodeError):
-            logger.error(
+            logging.getLogger(__name__).error(
                 "board_save_error path=%s",
                 path,
                 exc_info=True,
@@ -179,7 +176,7 @@ class BoardBase(ABC):
             raise
 
         duration_ms = int((time.time() - start_ts) * 1000)
-        logger.info(
+        logging.getLogger(__name__).info(
             "board_save_success path=%s variant=%s duration_ms=%s",
             path,
             self.variant,

@@ -9,6 +9,8 @@ services_sources = [
     'preferences.py',
     'preferences_manager.py',
     'log_paths.py',
+    'debug_settings.py',
+    'runtime_profile.py',
     'constants.py',
 ]
 

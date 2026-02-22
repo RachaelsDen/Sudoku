@@ -5,6 +5,20 @@ import sys
 from types import ModuleType
 from unittest.mock import MagicMock
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _module_cleanup():
+    yield
+    sys.modules.pop("src.log_utils", None)
+    sys.modules.pop("src.base.debug_settings", None)
+    sys.modules.pop("src.screens.about_dialog", None)
+    sys.modules.pop("gi", None)
+    sys.modules.pop("gi.repository", None)
+    sys.modules.pop("gi.repository.Gtk", None)
+    sys.modules.pop("gi.repository.Adw", None)
+
 
 def _install_fake_gi() -> None:
     gi = ModuleType("gi")
@@ -15,6 +29,8 @@ def _install_fake_gi() -> None:
     Gtk.Switch = type("Switch", (), {})
 
     Adw = ModuleType("Adw")
+    Adw.PreferencesWindow = type("PreferencesWindow", (), {})
+    Adw.PreferencesPage = type("PreferencesPage", (), {})
     Adw.PreferencesGroup = type("PreferencesGroup", (), {})
     Adw.ActionRow = type("ActionRow", (), {})
 
@@ -28,63 +44,70 @@ def _install_fake_gi() -> None:
     sys.modules["gi.repository.Adw"] = Adw
 
 
-def _install_fake_log_utils(mock_set_debug_logging: MagicMock) -> None:
+def _install_fake_log_utils(
+    mock_set_debug_logging: MagicMock,
+    mock_is_debug_logging_enabled: MagicMock,
+) -> None:
     fake = ModuleType("src.log_utils")
     fake.set_debug_logging = mock_set_debug_logging
+    fake.is_debug_logging_enabled = mock_is_debug_logging_enabled
     sys.modules["src.log_utils"] = fake
 
 
-def _import_general_preferences_page():
-    sys.modules.pop("src.screens.preferences_page", None)
-    module = importlib.import_module("src.screens.preferences_page")
-    return module.GeneralPreferencesPage
+def _install_fake_debug_settings(mock_save_preference: MagicMock) -> None:
+    fake = ModuleType("src.base.debug_settings")
+    fake.save_debug_logging_preference = mock_save_preference
+    sys.modules["src.base.debug_settings"] = fake
 
 
-def test_debug_logging_toggle_enables_calls_set_debug_logging():
+def _import_about_dialog():
+    sys.modules.pop("src.screens.about_dialog", None)
+    return importlib.import_module("src.screens.about_dialog")
+
+
+def test_debug_logging_toggle_enables_calls_save_and_set_debug_logging():
     mock_set_debug_logging = MagicMock()
+    mock_is_debug_logging_enabled = MagicMock(return_value=False)
+    mock_save_preference = MagicMock()
+
     _install_fake_gi()
-    _install_fake_log_utils(mock_set_debug_logging)
+    _install_fake_log_utils(mock_set_debug_logging, mock_is_debug_logging_enabled)
+    _install_fake_debug_settings(mock_save_preference)
 
-    GeneralPreferencesPage = _import_general_preferences_page()
-
-    page = GeneralPreferencesPage.__new__(GeneralPreferencesPage)
-    page.general_preferences = {
-        "debug_logging": [
-            "Enable verbose debug logging to file",
-            False
-        ]
-    }
-    page.auto_save_function = MagicMock()
+    module = _import_about_dialog()
+    module.log_utils.set_debug_logging = mock_set_debug_logging
+    module.log_utils.is_debug_logging_enabled = mock_is_debug_logging_enabled
+    module.save_debug_logging_preference = mock_save_preference
+    dialog = module.SudokuAboutDialog.__new__(module.SudokuAboutDialog)
 
     switch = MagicMock()
     switch.get_active.return_value = True
 
-    page.on_toggle_changed(switch, None, "debug_logging")
+    dialog._on_debug_logging_toggled(switch, None)
 
-    assert page.general_preferences["debug_logging"][1] is True
+    mock_save_preference.assert_called_once_with(True)
     mock_set_debug_logging.assert_called_once_with(True)
 
 
-def test_debug_logging_toggle_disables_calls_set_debug_logging():
+def test_debug_logging_toggle_disables_calls_save_and_set_debug_logging():
     mock_set_debug_logging = MagicMock()
+    mock_is_debug_logging_enabled = MagicMock(return_value=True)
+    mock_save_preference = MagicMock()
+
     _install_fake_gi()
-    _install_fake_log_utils(mock_set_debug_logging)
+    _install_fake_log_utils(mock_set_debug_logging, mock_is_debug_logging_enabled)
+    _install_fake_debug_settings(mock_save_preference)
 
-    GeneralPreferencesPage = _import_general_preferences_page()
-
-    page = GeneralPreferencesPage.__new__(GeneralPreferencesPage)
-    page.general_preferences = {
-        "debug_logging": [
-            "Enable verbose debug logging to file",
-            True
-        ]
-    }
-    page.auto_save_function = MagicMock()
+    module = _import_about_dialog()
+    module.log_utils.set_debug_logging = mock_set_debug_logging
+    module.log_utils.is_debug_logging_enabled = mock_is_debug_logging_enabled
+    module.save_debug_logging_preference = mock_save_preference
+    dialog = module.SudokuAboutDialog.__new__(module.SudokuAboutDialog)
 
     switch = MagicMock()
     switch.get_active.return_value = False
 
-    page.on_toggle_changed(switch, None, "debug_logging")
+    dialog._on_debug_logging_toggled(switch, None)
 
-    assert page.general_preferences["debug_logging"][1] is False
+    mock_save_preference.assert_called_once_with(False)
     mock_set_debug_logging.assert_called_once_with(False)

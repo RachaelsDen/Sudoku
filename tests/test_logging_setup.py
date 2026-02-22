@@ -5,6 +5,7 @@
 import os
 import re
 import sys
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -17,26 +18,35 @@ sys.modules["gi.repository.GLib"] = MagicMock()
 sys.modules["gi.repository.Adw"] = MagicMock()
 
 import pytest
+import gi.repository.GLib as GLib
 
 from src.base.log_paths import get_log_file_path
-from src.log_utils import setup_logging, get_session_id, set_debug_logging
+from src.base.preferences_manager import PreferencesManager
+import src.log_utils as log_utils_module
+from src.log_utils import (
+    setup_logging,
+    get_session_id,
+    set_debug_logging,
+    log_preference_change,
+)
 
 
 @pytest.fixture(autouse=True)
 def _logging_guard():
     """Reset logging state between tests."""
     # Reset module-level variables
-    import src.log_utils as log_utils_module
-
     log_utils_module._logging_configured = False
     log_utils_module._log_buffer_handler = None
     log_utils_module._session_id = None
     if hasattr(log_utils_module, "_startup_header_logged"):
         log_utils_module._startup_header_logged = False
+    if hasattr(log_utils_module, "_exc_info_enabled"):
+        log_utils_module._exc_info_enabled = True
 
     # Clear all handlers from root logger
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
+    PreferencesManager.set_preferences(None)
 
     yield
 
@@ -121,8 +131,6 @@ class TestLogSetup:
         assert handler1 is handler2
 
         # Should not have multiple buffer handlers in root logger
-        import src.log_utils as log_utils_module
-
         root_logger = logging.getLogger()
         buffer_handlers = [
             h for h in root_logger.handlers
@@ -141,8 +149,6 @@ class TestLogSetup:
         _ = setup_logging()
 
         # Verify file handler was created
-        import src.log_utils as log_utils_module
-
         root_logger = logging.getLogger()
         file_handlers = [
             h for h in root_logger.handlers
@@ -168,8 +174,6 @@ class TestLogSetup:
         _ = setup_logging()
 
         # Verify file handler exists
-        import src.log_utils as log_utils_module
-
         root_logger = logging.getLogger()
         file_handlers = [
             h for h in root_logger.handlers
@@ -239,13 +243,12 @@ class TestLogSetup:
         """Verify set_debug_logging adjusts handler level."""
         # Setup logging
         _ = setup_logging()
+        root_logger = logging.getLogger()
 
         # Enable debug logging
         set_debug_logging(True)
 
         # Verify debug logging is enabled
-        import src.log_utils as log_utils_module
-
         root_logger = logging.getLogger()
         file_handlers = [
             h for h in root_logger.handlers
@@ -253,12 +256,86 @@ class TestLogSetup:
         ]
         assert len(file_handlers) > 0
         assert file_handlers[0].level == logging.DEBUG
+        assert root_logger.level == logging.DEBUG
 
         # Disable debug logging
         set_debug_logging(False)
 
         # Verify debug logging is disabled
         assert file_handlers[0].level == logging.INFO
+        assert root_logger.level == logging.INFO
+
+    def test_set_debug_logging_controls_exc_info_output(self):
+        handler = setup_logging()
+        test_logger = logging.getLogger(__name__)
+
+        set_debug_logging(False)
+        try:
+            raise RuntimeError("boom")
+        except RuntimeError:
+            test_logger.error("without-stack", exc_info=True)
+
+        logs_without_debug = handler.get_logs()
+        assert "without-stack" in logs_without_debug
+        assert "Traceback" not in logs_without_debug
+
+        set_debug_logging(True)
+        try:
+            raise RuntimeError("boom")
+        except RuntimeError:
+            test_logger.error("with-stack", exc_info=True)
+
+        logs_with_debug = handler.get_logs()
+        assert "with-stack" in logs_with_debug
+        assert "Traceback" in logs_with_debug
+
+    def test_set_debug_logging_logs_preferences_snapshot_when_enabled(self):
+        handler = setup_logging()
+
+        class _Prefs:
+            name = "Classic Sudoku"
+            general_defaults = {"casual_mode": ["x", True]}
+            variant_defaults = {"highlight_block": True}
+
+        PreferencesManager.set_preferences(_Prefs())
+        set_debug_logging(True)
+
+        logs = handler.get_logs()
+        assert "preferences_snapshot trigger=debug_enabled" in logs
+        assert "general={'casual_mode': ['x', True]}" in logs
+
+    def test_set_preferences_logs_snapshot_when_debug_already_enabled(self):
+        handler = setup_logging()
+        set_debug_logging(True)
+
+        class _Prefs:
+            name = "Diagonal Sudoku"
+            general_defaults = {"highlight_row": True}
+            variant_defaults = {"highlight_diagonals": True}
+
+        PreferencesManager.set_preferences(_Prefs())
+
+        logs = handler.get_logs()
+        assert "preferences_snapshot trigger=preferences_loaded" in logs
+        assert "variant=Diagonal Sudoku" in logs
+
+    def test_preference_change_logged_when_debug_enabled(self):
+        handler = setup_logging()
+        set_debug_logging(True)
+
+        log_preference_change("general", "highlight_row", False)
+
+        logs = handler.get_logs()
+        assert "preference_changed scope=general key=highlight_row value=False" in logs
+
+    def test_preference_change_not_logged_when_debug_disabled(self):
+        handler = setup_logging()
+        set_debug_logging(False)
+
+        log_preference_change("general", "highlight_row", False)
+
+        logs = handler.get_logs()
+        assert "preference_changed scope=general key=highlight_row" not in logs
 
 
 class TestGLibIntegration:
@@ -266,8 +343,6 @@ class TestGLibIntegration:
 
     def test_glib_log_handler_setup_configured(self):
         """Verify setup_logging configures GLib log handler infrastructure."""
-        import gi.repository.GLib as GLib
-
         # Verify log_set_writer_func is available and callable
         assert hasattr(GLib, "log_set_writer_func")
         assert GLib.log_set_writer_func is not None
@@ -279,7 +354,3 @@ class TestGLibIntegration:
         # Verify log levels are defined
         assert hasattr(GLib, "LogLevelFlags")
         assert hasattr(GLib.LogLevelFlags, "LEVEL_MASK")
-
-
-# Import logging after GTK mocking
-import logging

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-import logging.handlers
 import sys
 from unittest.mock import MagicMock
 
@@ -16,12 +15,11 @@ sys.modules["gi.repository.Gio"] = MagicMock()
 import pytest
 
 from src.base.log_paths import get_log_file_path
+import src.log_utils as log_utils_module
 
 
 @pytest.fixture(autouse=True)
 def _logging_guard():
-    import src.log_utils as log_utils_module
-
     log_utils_module._logging_configured = False
     log_utils_module._log_buffer_handler = None
     log_utils_module._session_id = None

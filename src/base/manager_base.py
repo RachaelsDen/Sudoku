@@ -24,8 +24,6 @@ import logging
 import os
 import threading
 
-logger = logging.getLogger(__name__)
-
 
 class ManagerBase:
     def __init__(self, window, board_cls):
@@ -56,14 +54,16 @@ class ManagerBase:
             self.build_grid()
             self._restore_game_state()
             self.window.stack.set_visible_child(self.window.game_scrolled_window)
-            logger.info(
-                f"Restored {self.board.variant.capitalize()} Sudoku: "
-                f"filled_cells={filled_cells} notes={notes_count}"
+            logging.getLogger(__name__).info(
+                "Restored %s Sudoku: filled_cells=%s notes=%s",
+                self.board.variant.capitalize(),
+                filled_cells,
+                notes_count,
             )
             if self.board.is_solved():
                 self._show_puzzle_finished_dialog()
         else:
-            logger.error(
+            logging.getLogger(__name__).error(
                 "No saved game found path=%s exists=%s",
                 save_path,
                 save_exists,
@@ -77,8 +77,10 @@ class ManagerBase:
 
     def start_game(self, difficulty: float, difficulty_label: str, variant: str):
         self.window.stack.set_visible_child(self.window.loading_screen)
-        logger.info(
-            f"Starting {variant.capitalize()} Sudoku with difficulty: {difficulty}"
+        logging.getLogger(__name__).info(
+            "Starting %s Sudoku with difficulty: %s",
+            variant.capitalize(),
+            difficulty,
         )
 
         def worker():
@@ -172,8 +174,9 @@ class ManagerBase:
     def on_pencil_toggled(self, button: Gtk.ToggleButton):
         """Shared handler for pencil mode toggling."""
         self.pencil_mode = button.get_active()
-        logger.info(
-            "Pencil Mode is now ON" if self.pencil_mode else "Pencil mode is now OFF"
+        logging.getLogger(__name__).info(
+            "Pencil mode is now %s",
+            "ON" if self.pencil_mode else "OFF",
         )
 
     def on_grid_unfocus(self):

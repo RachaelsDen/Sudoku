@@ -527,7 +527,8 @@ class ClassicSudokuManager(ManagerBase):
     def on_pencil_toggled(self, button: Gtk.ToggleButton):
         self.pencil_mode = button.get_active()
         logging.info(
-            "Pencil Mode is now ON" if self.pencil_mode else "Pencil Mode is now OFF"
+            "Pencil mode is now %s",
+            "ON" if self.pencil_mode else "OFF",
         )
 
     def _show_puzzle_finished_dialog(self):
