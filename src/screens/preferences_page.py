@@ -92,6 +92,6 @@ class GeneralPreferencesPage(Adw.PreferencesGroup):
         self.auto_save_function()
 
         if key == "debug_logging":
-            from src.log_utils import set_debug_logging
+            from ..log_utils import set_debug_logging
 
             set_debug_logging(switch.get_active())
