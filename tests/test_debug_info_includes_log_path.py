@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.base.log_paths import get_log_file_path
-import src.log_utils as log_utils_module
 
 
 @pytest.fixture(autouse=True)
@@ -29,10 +28,6 @@ def _module_cleanup():
 
 @pytest.fixture(autouse=True)
 def _logging_guard():
-    log_utils_module._logging_configured = False
-    log_utils_module._log_buffer_handler = None
-    log_utils_module._session_id = None
-
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
 
