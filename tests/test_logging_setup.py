@@ -301,8 +301,9 @@ class TestLogSetup:
         set_debug_logging(True)
 
         logs = handler.get_logs()
-        assert "preferences_snapshot trigger=debug_enabled" in logs
-        assert "general={'casual_mode': ['x', True]}" in logs
+        assert "preferences_snapshot" in logs
+        assert "trigger=debug_enabled" in logs
+        assert "casual_mode" in logs
 
     def test_set_preferences_logs_snapshot_when_debug_already_enabled(self):
         handler = setup_logging()

@@ -1,21 +1,30 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import importlib
 import logging
 import sys
+from types import ModuleType
 from unittest.mock import MagicMock
-
-sys.modules["gi"] = MagicMock()
-sys.modules["gi.repository"] = MagicMock()
-sys.modules["gi.repository.Gtk"] = MagicMock()
-sys.modules["gi.repository.Gdk"] = MagicMock()
-sys.modules["gi.repository.GLib"] = MagicMock()
-sys.modules["gi.repository.Adw"] = MagicMock()
-sys.modules["gi.repository.Gio"] = MagicMock()
 
 import pytest
 
 from src.base.log_paths import get_log_file_path
 import src.log_utils as log_utils_module
+
+
+@pytest.fixture(autouse=True)
+def _module_cleanup():
+    yield
+    sys.modules.pop("src.application", None)
+    sys.modules.pop("src.window", None)
+    sys.modules.pop("src.screens.about_dialog", None)
+    sys.modules.pop("src.screens.help_dialog", None)
+    sys.modules.pop("gi", None)
+    sys.modules.pop("gi.repository", None)
+    sys.modules.pop("gi.repository.Gtk", None)
+    sys.modules.pop("gi.repository.Adw", None)
+    sys.modules.pop("gi.repository.Gio", None)
+    sys.modules.pop("gi.repository.GLib", None)
 
 
 @pytest.fixture(autouse=True)
@@ -30,123 +39,124 @@ def _logging_guard():
     yield
 
 
-class TestDebugInfoIncludesLogPath:
-    """Tests for debug info including log file path and level in
-    generate_debug_info()."""
+def _install_fake_application_imports(monkeypatch) -> None:
+    gi = ModuleType("gi")
+    repository = ModuleType("gi.repository")
 
-    def test_generate_debug_info_includes_log_file_path(self):
-        """Verify generate_debug_info() includes log file path."""
-        # Create a mock application class
-        class MockApp:
-            def __init__(self, version):
-                self.version = version
-                self.log_handler = MagicMock()
-                self.log_handler.get_logs.return_value = "Test log message\n"
+    Gtk = ModuleType("Gtk")
+    Gtk.MAJOR_VERSION = 4
+    Gtk.MINOR_VERSION = 14
+    Gtk.MICRO_VERSION = 0
 
-            def generate_debug_info(self):
-                log_file_path = get_log_file_path()
-                log_level = "INFO"
+    Adw = ModuleType("Adw")
+    Adw.MAJOR_VERSION = 1
+    Adw.MINOR_VERSION = 6
+    Adw.MICRO_VERSION = 0
+    Adw.Application = type("Application", (), {})
 
-                # Build debug info matching the implementation
-                info = (
-                    f"Sudoku {self.version}\n"
-                    f"System: Linux\n"
-                    f"Dist: Ubuntu 24.04\n"
-                    f"Python 3.12.0\n"
-                    f"GTK 4.0.0\n"
-                    f"Adwaita 1.0.0\n"
-                    f"PyGObject 3.12.0\n"
-                    f"Log File: {log_file_path}\n"
-                    f"Log Level: {log_level}\n"
-                    "\n--- Logs ---\n"
-                    f"{self.log_handler.get_logs()}"
-                )
-                return info
+    Gio = ModuleType("Gio")
+    Gio.ApplicationFlags = type("ApplicationFlags", (), {"FLAGS_NONE": 0})
 
-        app = MockApp(version="1.0.0")
-        debug_info = app.generate_debug_info()
+    GLib = ModuleType("GLib")
 
-        # Verify log file path is present in output
-        assert "Log File:" in debug_info
-        assert get_log_file_path() in debug_info
+    repository.Gtk = Gtk
+    repository.Adw = Adw
+    repository.Gio = Gio
+    repository.GLib = GLib
 
-    def test_generate_debug_info_includes_log_level(self):
-        """Verify generate_debug_info() includes log level."""
-        # Create a mock application class
-        class MockApp:
-            def __init__(self, version):
-                self.version = version
-                self.log_handler = MagicMock()
-                self.log_handler.get_logs.return_value = "Test log message\n"
+    gi.require_version = lambda *_args: None
+    gi.repository = repository
+    gi.version_info = (3, 48, 2)
 
-            def generate_debug_info(self):
-                log_file_path = get_log_file_path()
-                log_level = "INFO"
+    monkeypatch.setitem(sys.modules, "gi", gi)
+    monkeypatch.setitem(sys.modules, "gi.repository", repository)
+    monkeypatch.setitem(sys.modules, "gi.repository.Gtk", Gtk)
+    monkeypatch.setitem(sys.modules, "gi.repository.Adw", Adw)
+    monkeypatch.setitem(sys.modules, "gi.repository.Gio", Gio)
+    monkeypatch.setitem(sys.modules, "gi.repository.GLib", GLib)
 
-                # Build debug info matching the implementation
-                info = (
-                    f"Sudoku {self.version}\n"
-                    f"System: Linux\n"
-                    f"Dist: Ubuntu 24.04\n"
-                    f"Python 3.12.0\n"
-                    f"GTK 4.0.0\n"
-                    f"Adwaita 1.0.0\n"
-                    f"PyGObject 3.12.0\n"
-                    f"Log File: {log_file_path}\n"
-                    f"Log Level: {log_level}\n"
-                    "\n--- Logs ---\n"
-                    f"{self.log_handler.get_logs()}"
-                )
-                return info
+    window_module = ModuleType("src.window")
+    window_module.SudokuWindow = type("SudokuWindow", (), {})
+    monkeypatch.setitem(sys.modules, "src.window", window_module)
 
-        app = MockApp(version="1.0.0")
-        debug_info = app.generate_debug_info()
+    about_module = ModuleType("src.screens.about_dialog")
+    about_module.SudokuAboutDialog = type("SudokuAboutDialog", (), {})
+    monkeypatch.setitem(sys.modules, "src.screens.about_dialog", about_module)
 
-        # Verify log level is present in output
-        assert "Log Level:" in debug_info
-        assert "INFO" in debug_info or "DEBUG" in debug_info
+    help_module = ModuleType("src.screens.help_dialog")
+    help_module.HowToPlayDialog = type("HowToPlayDialog", (), {})
+    monkeypatch.setitem(sys.modules, "src.screens.help_dialog", help_module)
 
-    def test_generate_debug_info_format(self):
-        """Verify debug info has proper format with log file and level lines."""
-        # Create a mock application class
-        class MockApp:
-            def __init__(self, version):
-                self.version = version
-                self.log_handler = MagicMock()
-                self.log_handler.get_logs.return_value = "Test log message\n"
 
-            def generate_debug_info(self):
-                log_file_path = get_log_file_path()
-                log_level = "INFO"
+def _import_application_module(monkeypatch):
+    _install_fake_application_imports(monkeypatch)
+    sys.modules.pop("src.application", None)
+    return importlib.import_module("src.application")
 
-                # Build debug info matching the implementation
-                info = (
-                    f"Sudoku {self.version}\n"
-                    f"System: Linux\n"
-                    f"Dist: Ubuntu 24.04\n"
-                    f"Python 3.12.0\n"
-                    f"GTK 4.0.0\n"
-                    f"Adwaita 1.0.0\n"
-                    f"PyGObject 3.12.0\n"
-                    f"Log File: {log_file_path}\n"
-                    f"Log Level: {log_level}\n"
-                    "\n--- Logs ---\n"
-                    f"{self.log_handler.get_logs()}"
-                )
-                return info
 
-        app = MockApp(version="1.0.0")
-        debug_info = app.generate_debug_info()
+def _make_application_instance(application_module):
+    app = application_module.SudokuApplication.__new__(
+        application_module.SudokuApplication
+    )
+    app.version = "1.0.0"
+    app.log_handler = MagicMock()
+    app.log_handler.get_logs.return_value = "Test log message\n"
+    return app
 
-        # Verify the log file and level appear in the right order
-        log_file_line = f"Log File: {get_log_file_path()}"
-        log_level_line = "Log Level:"
 
-        # Verify both lines are present
-        assert log_file_line in debug_info
-        assert log_level_line in debug_info
+def test_generate_debug_info_includes_log_file_path(monkeypatch):
+    application_module = _import_application_module(monkeypatch)
+    app = _make_application_instance(application_module)
 
-        # Verify they appear before "--- Logs ---" section
-        logs_section = "--- Logs ---"
-        assert debug_info.find(log_file_line) < debug_info.find(logs_section)
-        assert debug_info.find(log_level_line) < debug_info.find(logs_section)
+    monkeypatch.setattr(application_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        application_module.platform,
+        "freedesktop_os_release",
+        lambda: {"PRETTY_NAME": "Ubuntu 24.04"},
+    )
+
+    debug_info = app.generate_debug_info()
+
+    assert "Log File:" in debug_info
+    assert get_log_file_path() in debug_info
+
+
+def test_generate_debug_info_includes_log_level(monkeypatch):
+    application_module = _import_application_module(monkeypatch)
+    app = _make_application_instance(application_module)
+
+    monkeypatch.setattr(application_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        application_module.platform,
+        "freedesktop_os_release",
+        lambda: {"PRETTY_NAME": "Ubuntu 24.04"},
+    )
+
+    debug_info = app.generate_debug_info()
+
+    assert "Log Level:" in debug_info
+    assert "Log Level: INFO" in debug_info
+
+
+def test_generate_debug_info_format(monkeypatch):
+    application_module = _import_application_module(monkeypatch)
+    app = _make_application_instance(application_module)
+
+    monkeypatch.setattr(application_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        application_module.platform,
+        "freedesktop_os_release",
+        lambda: {"PRETTY_NAME": "Ubuntu 24.04"},
+    )
+
+    debug_info = app.generate_debug_info()
+
+    log_file_line = f"Log File: {get_log_file_path()}"
+    log_level_line = "Log Level:"
+
+    assert log_file_line in debug_info
+    assert log_level_line in debug_info
+
+    logs_section = "--- Logs ---"
+    assert debug_info.find(log_file_line) < debug_info.find(logs_section)
+    assert debug_info.find(log_level_line) < debug_info.find(logs_section)
