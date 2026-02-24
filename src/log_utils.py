@@ -25,7 +25,6 @@ from uuid import uuid4
 
 from gi.repository import GLib  # pyright: ignore[reportAttributeAccessIssue]
 
-from .base.debug_settings import load_debug_logging_preference
 from .base.log_paths import get_log_file_path
 from .base.preferences_manager import PreferencesManager
 from .base.runtime_profile import default_debug_logging_enabled
@@ -179,14 +178,26 @@ def _parse_log_level(level_str: str) -> int | None:
     return None
 
 
+def _parse_env_bool(value: str | None) -> bool | None:
+    if value is None:
+        return None
+
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
 def _get_initial_runtime_level() -> int:
     env_level = _parse_log_level(os.environ.get('SUDOKU_LOG_LEVEL', ''))
     if env_level is not None:
         return env_level
 
-    persisted_enabled = load_debug_logging_preference()
-    if persisted_enabled is not None:
-        return logging.DEBUG if persisted_enabled else logging.INFO
+    debug_override = _parse_env_bool(os.environ.get("DEBUG"))
+    if debug_override is not None:
+        return logging.DEBUG if debug_override else logging.INFO
 
     return logging.DEBUG if default_debug_logging_enabled() else logging.INFO
 
