@@ -19,7 +19,10 @@
 
 from gettext import gettext as _
 
-from gi.repository import Adw
+from gi.repository import Adw, Gtk
+
+from ..base.debug_settings import save_debug_logging_preference
+from .. import log_utils
 
 
 class SudokuAboutDialog(Adw.PreferencesWindow):
@@ -37,6 +40,13 @@ class SudokuAboutDialog(Adw.PreferencesWindow):
         about_group.add(self._info_row(_("Developers"), "Sepehr, Revisto"))
         page.add(about_group)
 
+        troubleshooting_group = Adw.PreferencesGroup(title=_("Troubleshooting"))
+        troubleshooting_group.set_description(
+            _("Diagnostic controls and data useful for issue reports")
+        )
+        troubleshooting_group.add(self._debug_logging_row())
+        page.add(troubleshooting_group)
+
         self.add(page)
 
     def _info_row(self, title: str, subtitle: str) -> Adw.ActionRow:
@@ -44,3 +54,20 @@ class SudokuAboutDialog(Adw.PreferencesWindow):
         row.set_subtitle(subtitle)
         row.set_activatable(False)
         return row
+
+    def _debug_logging_row(self) -> Adw.ActionRow:
+        row = Adw.ActionRow(title=_("Enable debug logging"))
+        row.set_subtitle(_("Capture verbose logs and exception tracebacks"))
+
+        switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        switch.set_active(log_utils.is_debug_logging_enabled())
+        switch.connect("notify::active", self._on_debug_logging_toggled)
+
+        row.add_suffix(switch)
+        row.set_activatable_widget(switch)
+        return row
+
+    def _on_debug_logging_toggled(self, switch, _gparam) -> None:
+        enabled = switch.get_active()
+        save_debug_logging_preference(enabled)
+        log_utils.set_debug_logging(enabled)
